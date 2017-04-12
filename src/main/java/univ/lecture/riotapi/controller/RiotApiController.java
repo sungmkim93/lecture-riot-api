@@ -1,45 +1,50 @@
 package univ.lecture.riotapi.controller;
 
-import lombok.extern.log4j.Log4j;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.json.JacksonJsonParser;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
-import univ.lecture.riotapi.model.Summoner;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.io.UnsupportedEncodingException;
-import java.util.Map;
+import lombok.extern.log4j.Log4j;
 
 /**
  * Created by tchi on 2017. 4. 1..
  */
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/")
 @Log4j
 public class RiotApiController {
-    @Autowired
-    private RestTemplate restTemplate;
+   @Autowired
+   private RestTemplate restTemplate;
 
-    @RequestMapping(value = "/summoner/{name}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public Summoner querySummoner(@PathVariable("name") String summonerName) throws UnsupportedEncodingException {
-        final String url = "https://kr.api.pvp.net/api/lol/kr/v1.4/summoner/by-name/" +
-                summonerName +
-                "?api_key=7f69a913-a7e3-4d41-b343-6389ba6fe730";
+   @Value("${riot.api.endpoint}")
+   private String riotApiEndpoint;
 
-        String response = restTemplate.getForObject(url, String.class);
-        Map<String, Object> parsedMap = new JacksonJsonParser().parseMap(response);
+   @Value("${riot.api.key}")
+   private String riotApiKey;
 
-        parsedMap.forEach((key, value) -> log.info(String.format("key [%s] type [%s] value [%s]", key, value.getClass(), value)));
+   @RequestMapping(value = "/calc/{name}", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
+   public ObjectNode querySummoner2(@PathVariable("name") String exp) throws IOException {
+      CalcApp calc = new CalcApp();
+      String args[] = exp.split(" ");
 
-        Map<String, Object> summonerDetail = (Map<String, Object>) parsedMap.values().toArray()[0];
-        String queriedName = (String)summonerDetail.get("name");
-        int queriedLevel = (Integer)summonerDetail.get("summonerLevel");
-        Summoner summoner = new Summoner(queriedName, queriedLevel);
+      double result = calc.calc(args);
 
-        return summoner;
-    }
+      ObjectNode reData = JsonNodeFactory.instance.objectNode(); 		// return data 생성
+      reData.put("teamid", 2);
+      reData.put("now", System.currentTimeMillis());
+      reData.put("result", Double.toString(result));
+
+      return reData;
+   }
 }
